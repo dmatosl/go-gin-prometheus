@@ -140,6 +140,7 @@ func NewPrometheus(subsystem string, customMetricsList ...[]*Metric) *Prometheus
 		MetricsList: metricsList,
 		MetricsPath: defaultMetricPath,
 		ReqCntURLLabelMappingFn: func(c *gin.Context) string {
+
 			return c.Request.URL.Path // i.e. by default do nothing, i.e. return URL as is
 		},
 	}
@@ -288,6 +289,7 @@ func NewMetric(m *Metric, subsystem string) prometheus.Collector {
 				Subsystem: subsystem,
 				Name:      m.Name,
 				Help:      m.Description,
+				Buckets:   []float64{0.05, 0.1, 0.5, 1, 2, 5, 10},
 			},
 			m.Args,
 		)
@@ -297,6 +299,7 @@ func NewMetric(m *Metric, subsystem string) prometheus.Collector {
 				Subsystem: subsystem,
 				Name:      m.Name,
 				Help:      m.Description,
+				Buckets:   []float64{0.05, 0.1, 0.5, 1, 2, 5, 10},
 			},
 		)
 	case "summary_vec":
@@ -357,6 +360,11 @@ func (p *Prometheus) UseWithAuth(e *gin.Engine, accounts gin.Accounts) {
 func (p *Prometheus) HandlerFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.URL.Path == p.MetricsPath {
+			c.Next()
+			return
+		}
+
+		if strconv.Itoa(c.Writer.Status()) == "404" {
 			c.Next()
 			return
 		}
